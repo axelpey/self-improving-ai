@@ -164,3 +164,4 @@ cython_debug/
 models/
 llama-cpp-python/
 .DS_Store
+data/
