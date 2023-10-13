@@ -38,13 +38,6 @@ def play_audio(filename):
     print("Playback finished.")
 
 
-def transcribe_recording(filename):
-    segments, info = whisper.transcribe(filename)
-    transcribed_segments = list(segments)
-    transcribed_text = " ".join([segment.text for segment in transcribed_segments])
-    return transcribed_text
-
-
 def record_and_transcribe(filename, duration):
     print(f"Recording for {duration} seconds...")
     record_audio(filename, duration)

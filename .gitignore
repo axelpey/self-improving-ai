@@ -165,3 +165,8 @@ models/
 llama-cpp-python/
 .DS_Store
 data/
+creds.json
+
+# Added by cargo
+
+/target

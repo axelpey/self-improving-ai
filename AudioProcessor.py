@@ -4,15 +4,17 @@ import os
 from pathlib import Path
 import re
 from typing import List
-from llm_queries import is_jarvis_instruction
+from llm_queries import is_jarvis_instruction, query_llm
+from models import whisper
 
-from transcription import record_audio, transcribe_recording
+from transcription import record_audio
 
 
 def retrieve_last_n_seconds(
     data: str, duration_per_chunk: int, total_seconds: int
 ) -> List[str]:
-    """Retrieves the transcriptions of the last n seconds (or equivalent duration) from given data."""
+    """Retrieves the transcriptions of the last n seconds (or equivalent
+    duration) from given data."""
     # Assuming each chunk is of uniform duration
     chunks_needed = total_seconds // duration_per_chunk
 
@@ -54,9 +56,10 @@ class AudioProcessor:
         while self.running:
             if processed_chunks < self.chunk_id:
                 f_name = str(self.data_folder / f"chunk_{processed_chunks}.mp3")
-                transcription = transcribe_recording(f_name)
+                transcription = whisper.transcribe(f_name)
 
-                # Sometimes, the transcription is hallucinating and contains "Thank you for watching" or some alternative.
+                # Sometimes, the transcription is hallucinating and contains
+                # "Thank you for watching" or some alternative.
                 if "Thank" in transcription and "watching" in transcription:
                     transcription = "[HALLUCINATION]"
 
@@ -74,6 +77,8 @@ class AudioProcessor:
         print("Transcription stopped.")
 
     def process_transcriptions(self):
+        text_to_study = ""
+
         while self.running:
             if not Path(self.txt_file).exists():
                 time.sleep(1)
@@ -100,11 +105,17 @@ class AudioProcessor:
                 ]
 
                 # Finally, get the text of the last unprocessed chunks
-                text_to_study = " ".join(
+                new_text_to_study = " ".join(
                     [chunk[2] for chunk in last_unprocessed_chunks]
                 )
 
-                print("Text to study:", text_to_study)
+                if new_text_to_study == text_to_study:
+                    time.sleep(0.5)
+                    continue
+
+                text_to_study = new_text_to_study
+
+                print("New text to study:", text_to_study)
 
                 if is_jarvis_instruction(text_to_study):
                     # First mark the chunks as processed
@@ -123,14 +134,9 @@ class AudioProcessor:
                     self.is_transcription_locked = False
 
                     # Provide the answer accordingly
-                    os.system(
-                        f"say 'Here is Jarvis, I have received instructrions from you.'"
-                    )
-                    # response  = query_llm(text_to_study)
-                    # response = response.replace('\'', '"')
-                    os.system(
-                        f"say 'I am not ready to process your request yet, but I will be soon.'"
-                    )
+                    response = query_llm(text_to_study)
+                    response = response.replace("'", '"')
+                    os.system(f"say '{response}'")
 
             time.sleep(1)
         print("Processing stopped.")
